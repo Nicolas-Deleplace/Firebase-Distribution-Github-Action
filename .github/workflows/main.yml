@@ -7,14 +7,32 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
       - name: Get sample .apk for test purposes
-        run: wget https://github.com/appium/appium/raw/master/sample-code/apps/ApiDemos-debug.apk
+        run: wget https://github.com/appium/appium/raw/1.10/sample-code/apps/ApiDemos-debug.apk
       - name: Upload artifact to Firebase Distribution
+        id: testing_outputs
         uses: ./
         with:
           appId: ${{secrets.FIREBASE_APP_ID}}
           token: ${{secrets.FIREBASE_TOKEN}}
           groups: Testers
           file: ApiDemos-debug.apk
+      - name: Assert outputs of previous step are not empty
+        run: |
+          echo "${{ steps.testing_outputs.outputs.FIREBASE_CONSOLE_URI }}"
+          if [[ -z "${{ steps.testing_outputs.outputs.FIREBASE_CONSOLE_URI }}" ]]; then
+            echo "Console URI is empty" >&2
+            exit 1
+          fi
+          echo "${{ steps.testing_outputs.outputs.TESTING_URI }}"
+          if [[ -z "${{ steps.testing_outputs.outputs.TESTING_URI }}" ]]; then
+            echo "Testing URI is empty" >&2
+            exit 1
+          fi
+          echo "${{ steps.testing_outputs.outputs.BINARY_DOWNLOAD_URI }}"
+          if [[ -z "${{ steps.testing_outputs.outputs.BINARY_DOWNLOAD_URI }}" ]]; then
+            echo "Binary download URI is empty" >&2
+            exit 1
+          fi
       - name: Upload artifact to Firebase Distribution with release note file
         uses: ./
         with:
@@ -49,4 +67,40 @@ jobs:
           file: ApiDemos-debug.apk
           debug: true
           serviceCredentialsFile: credential_file.json
+      - name: Upload artifact to Firebase Distribution using credential file content
+        uses: ./
+        with:
+          appId: ${{secrets.FIREBASE_APP_ID}}
+          groups: Testers
+          releaseNotesFile: README.md
+          file: ApiDemos-debug.apk
+          debug: true
+          serviceCredentialsFileContent: ${{ secrets.CREDENTIAL_FILE_CONTENT }}
+      - name: Upload artifact to Firebase Distribution with testers
+        uses: ./
+        with:
+          appId: ${{secrets.FIREBASE_APP_ID}}
+          token: ${{secrets.FIREBASE_TOKEN}}
+          testers: "test@test.com, test2@test2.com"
+          releaseNotesFile: README.md
+          file: ApiDemos-debug.apk
+      - name: Failure during upload should set failure in action step
+        id: fail_check
+        uses: ./
+        continue-on-error: true
+        with:
+          appId: invalid_app_id
+          token: ${{secrets.FIREBASE_TOKEN}}
+          testers: "test@test.com, test2@test2.com"
+          releaseNotesFile: README.md
+          file: ApiDemos-debug.apk
+      - name: Check if previous step failed as expected
+        run: |
+          if [[ "${{ steps.fail_check.outcome }}" == 'failure' ]]; then
+            echo "Previous step failed as expected"
+            exit 0
+          else
+            echo "Previous step succeeded, when it shouldn't"
+            exit 1
+          fi
 

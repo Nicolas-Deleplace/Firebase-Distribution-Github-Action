@@ -9,13 +9,19 @@ inputs:
     description: 'Upload token - see Firebase CLI Reference'
     required: false
   serviceCredentialsFile:
-    description: 'Service credential file'
+    description: 'Service credentials file'
+    required: false
+  serviceCredentialsFileContent:
+    description: 'Content of service credentials file'
     required: false
   file:
     description: 'Artifact to upload (.apk or .ipa)'
     required: true
   groups:
     description: 'Distribution groups'
+    required: false
+  testers:
+    description: 'Distribution testers'
     required: false
   releaseNotes:
     description: 'Release notes visible on release page'
@@ -32,4 +38,4 @@ branding:
   icon: 'send'
 runs:
   using: 'docker'
-  image: 'Dockerfile'
+  image: docker://ghcr.io/wzieba/firebase-distribution-github-action:sha-344aa66
